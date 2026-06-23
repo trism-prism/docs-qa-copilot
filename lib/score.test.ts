@@ -24,89 +24,51 @@ test("right facts and a gold-page citation is correct", () => {
   assert.deepEqual(s, { factsMet: true, missedFacts: [], citationHit: true, abstained: false, correct: true });
 });
 
-test("right facts with no citation is wrong", () => {
-  const s = scoreResult(answerable, { answer: "It is $350 per person.", citations: [] });
-  assert.equal(s.factsMet, true);
-  assert.equal(s.citationHit, false);
-  assert.equal(s.correct, false);
-});
+type Scored = ReturnType<typeof scoreResult>;
+type Row = [name: string, answer: string, citations: ReturnType<typeof cite>[], expect: Partial<Scored>];
 
-test("right citation with the wrong number is wrong", () => {
-  const s = scoreResult(answerable, { answer: "It is $300 per person.", citations: [cite(30)] });
-  assert.equal(s.citationHit, true);
-  assert.equal(s.factsMet, false);
-  assert.equal(s.correct, false);
-  assert.deepEqual(s.missedFacts, [["\\$350(?!,?\\d|\\.\\d)"]]);
-});
+function table(q: Question, rows: Row[]) {
+  for (const [name, answer, citations, expect] of rows) {
+    test(name, () => {
+      const s = scoreResult(q, { answer, citations });
+      for (const [key, want] of Object.entries(expect)) assert.deepEqual(s[key as keyof Scored], want, key);
+    });
+  }
+}
 
-test("a number that only contains the right one does not match", () => {
-  const s = scoreResult(answerable, { answer: "It is $3,500 per person.", citations: [cite(30)] });
-  assert.equal(s.factsMet, false);
-});
-
-test("every fact is required, any alternative satisfies one fact", () => {
-  assert.equal(scoreResult(answerable, { answer: "$350 for an individual", citations: [cite(30)] }).correct, true);
-  const s = scoreResult(answerable, { answer: "$350", citations: [cite(30)] });
-  assert.equal(s.correct, false);
-  assert.deepEqual(s.missedFacts, [["per person", "individual"]]);
-});
-
-test("matching ignores case, bold markers and line breaks", () => {
-  const s = scoreResult(answerable, { answer: "$350 PER\nPERSON", citations: [cite(30)] });
-  assert.equal(s.factsMet, true);
-  assert.equal(scoreResult(answerable, { answer: "$**350** per person", citations: [cite(30)] }).factsMet, true);
-});
-
-test("a citation on a non-gold page is wrong", () => {
-  const s = scoreResult(answerable, { answer: "$350 per person", citations: [cite(31)] });
-  assert.equal(s.citationHit, false);
-  assert.equal(s.correct, false);
-});
-
-test("a gold page number in the wrong document is wrong", () => {
-  const s = scoreResult(answerable, { answer: "$350 per person", citations: [cite(30, "Doc B")] });
-  assert.equal(s.citationHit, false);
-  assert.equal(s.correct, false);
-});
-
-test("one gold citation among others is enough", () => {
-  const s = scoreResult(answerable, { answer: "$350 per person", citations: [cite(5), cite(164), cite(99, "Doc B")] });
-  assert.equal(s.correct, true);
-});
-
-test("abstaining on an answerable question is wrong", () => {
-  const s = scoreResult(answerable, { answer: NOT_IN_DOCUMENTS_SENTENCE, citations: [] });
-  assert.equal(s.abstained, true);
-  assert.equal(s.correct, false);
-});
-
-test("abstaining wins over matching text and citations", () => {
-  const s = scoreResult(answerable, { answer: `${NOT_IN_DOCUMENTS_SENTENCE} $350 per person`, citations: [cite(30)] });
-  assert.equal(s.abstained, true);
-  assert.equal(s.correct, false);
-});
+table(answerable, [
+  ["right facts with no citation is wrong", "It is $350 per person.", [], { factsMet: true, citationHit: false, correct: false }],
+  [
+    "right citation with the wrong number is wrong",
+    "It is $300 per person.",
+    [cite(30)],
+    { citationHit: true, factsMet: false, correct: false, missedFacts: [["\\$350(?!,?\\d|\\.\\d)"]] },
+  ],
+  ["a number that only contains the right one does not match", "It is $3,500 per person.", [cite(30)], { factsMet: false }],
+  ["every fact is required: any alternative satisfies one fact", "$350 for an individual", [cite(30)], { correct: true }],
+  ["every fact is required: a missing fact is reported", "$350", [cite(30)], { correct: false, missedFacts: [["per person", "individual"]] }],
+  ["matching ignores case and line breaks", "$350 PER\nPERSON", [cite(30)], { factsMet: true }],
+  ["matching ignores bold markers", "$**350** per person", [cite(30)], { factsMet: true }],
+  ["a citation on a non-gold page is wrong", "$350 per person", [cite(31)], { citationHit: false, correct: false }],
+  ["a gold page number in the wrong document is wrong", "$350 per person", [cite(30, "Doc B")], { citationHit: false, correct: false }],
+  ["one gold citation among others is enough", "$350 per person", [cite(5), cite(164), cite(99, "Doc B")], { correct: true }],
+  ["abstaining on an answerable question is wrong", NOT_IN_DOCUMENTS_SENTENCE, [], { abstained: true, correct: false }],
+  ["abstaining wins over matching text and citations", `${NOT_IN_DOCUMENTS_SENTENCE} $350 per person`, [cite(30)], { abstained: true, correct: false }],
+]);
 
 test("unanswerable: abstaining with no citations is correct", () => {
   const s = scoreResult(unanswerable, { answer: NOT_IN_DOCUMENTS_SENTENCE, citations: [] });
   assert.deepEqual(s, { factsMet: false, missedFacts: [], citationHit: false, abstained: true, correct: true });
-  assert.equal(scoreResult(unanswerable, { answer: `  ${NOT_IN_DOCUMENTS_SENTENCE}\n`, citations: [] }).correct, true);
 });
 
-test("unanswerable: answering is wrong", () => {
-  const s = scoreResult(unanswerable, { answer: "The deductible will be $400 in 2027.", citations: [cite(30)] });
-  assert.equal(s.abstained, false);
-  assert.equal(s.correct, false);
-  assert.equal(scoreResult(unanswerable, { answer: "The deductible will be $400.", citations: [] }).correct, false);
-});
-
-test("unanswerable: abstaining while still citing is wrong", () => {
-  assert.equal(scoreResult(unanswerable, { answer: NOT_IN_DOCUMENTS_SENTENCE, citations: [cite(30)] }).correct, false);
-});
-
-test("unanswerable: the sentence must be at the start", () => {
-  assert.equal(scoreResult(unanswerable, { answer: `I think so. ${NOT_IN_DOCUMENTS_SENTENCE}`, citations: [] }).correct, false);
-  assert.equal(scoreResult(unanswerable, { answer: "", citations: [] }).correct, false);
-});
+table(unanswerable, [
+  ["unanswerable: the sentence may be padded with whitespace", `  ${NOT_IN_DOCUMENTS_SENTENCE}\n`, [], { correct: true }],
+  ["unanswerable: answering is wrong", "The deductible will be $400 in 2027.", [cite(30)], { abstained: false, correct: false }],
+  ["unanswerable: answering with no citation is wrong", "The deductible will be $400.", [], { correct: false }],
+  ["unanswerable: abstaining while still citing is wrong", NOT_IN_DOCUMENTS_SENTENCE, [cite(30)], { correct: false }],
+  ["unanswerable: the sentence must be at the start", `I think so. ${NOT_IN_DOCUMENTS_SENTENCE}`, [], { correct: false }],
+  ["unanswerable: an empty answer is wrong", "", [], { correct: false }],
+]);
 
 test("the frozen set is well formed and every regex compiles", () => {
   const set: Question[] = JSON.parse(readFileSync(new URL("../eval/questions.json", import.meta.url), "utf8"));

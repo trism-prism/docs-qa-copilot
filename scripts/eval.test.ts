@@ -9,17 +9,21 @@ test("dev is the default and needs no --final", () => {
   assert.equal(parseArgs(["--split", "dev", "--retrieval-only", "--label", "x"]).out.replaceAll("\\", "/"), "eval/results/x.json");
 });
 
-test("heldout and all are refused without --final, retrieval-only included", () => {
-  for (const split of ["heldout", "all"]) {
+for (const split of ["heldout", "all"]) {
+  test(`${split} is refused without --final, retrieval-only included`, () => {
     assert.throws(() => parseArgs(["--split", split]), /refused without --final/);
     assert.throws(() => parseArgs(["--split", split, "--retrieval-only"]), /refused without --final/);
-  }
-});
+  });
+}
 
-test("heldout and all are allowed with --final", () => {
-  assert.equal(parseArgs(["--split", "heldout", "--final"]).split, "heldout");
-  assert.equal(parseArgs(["--split", "all", "--final", "--out", "a.json"]).out, "a.json");
-});
+for (const [argv, key, want] of [
+  [["--split", "heldout", "--final"], "split", "heldout"],
+  [["--split", "all", "--final", "--out", "a.json"], "out", "a.json"],
+] as const) {
+  test(`${argv.join(" ")} is allowed`, () => {
+    assert.equal(parseArgs([...argv])[key], want);
+  });
+}
 
 test("an unknown split is rejected", () => {
   assert.throws(() => parseArgs(["--split", "test"]), /--split must be/);

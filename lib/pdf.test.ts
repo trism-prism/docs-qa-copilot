@@ -24,22 +24,17 @@ test("page numbers and line reconstruction", async () => {
   ]);
 });
 
-test("non-PDF rejected", async () => {
-  assert.equal(await codeOf(extractPages(Buffer.from("hello, definitely not a pdf"))), "not_pdf");
-});
-
-test("corrupt PDF gives a clean error", async () => {
-  assert.equal(await codeOf(extractPages(Buffer.from("%PDF-1.7\nthis is garbage"))), "bad_pdf");
-});
-
-test("PDF without text rejected", async () => {
-  assert.equal(await codeOf(extractPages(await makePdf([[], []]))), "no_text");
-});
-
-test("too many pages rejected", async () => {
-  const pdf = await makePdf(Array.from({ length: MAX_PAGES + 1 }, () => ["x"]));
-  assert.equal(await codeOf(extractPages(pdf)), "too_many_pages");
-});
+const rejects: [name: string, build: () => Promise<Buffer>, code: string][] = [
+  ["non-PDF rejected", async () => Buffer.from("hello, definitely not a pdf"), "not_pdf"],
+  ["corrupt PDF gives a clean error", async () => Buffer.from("%PDF-1.7\nthis is garbage"), "bad_pdf"],
+  ["PDF without text rejected", () => makePdf([[], []]), "no_text"],
+  ["too many pages rejected", () => makePdf(Array.from({ length: MAX_PAGES + 1 }, () => ["x"])), "too_many_pages"],
+];
+for (const [name, build, code] of rejects) {
+  test(name, async () => {
+    assert.equal(await codeOf(extractPages(await build())), code);
+  });
+}
 
 test("NUL characters are stripped from extracted text", async () => {
   // A ToUnicode map sends char code 0 to U+0000, so pdf.js really emits a NUL.
