@@ -319,7 +319,7 @@ export default async function EvalPage() {
             chunk higher.
           </p>
           <p>
-            The 50 questions were written by hand before the system was run and are frozen. 20 are the dev split, used to tune extraction and retrieval; 30 are held out and were run once,
+            The 50 questions were drafted with Claude and audited by the author before the system was run, and are frozen. 20 are the dev split, used to tune extraction and retrieval; 30 are held out and were run once,
             after tuning stopped. Fifty questions is a small sample: one question is 2 points overall, and a model&apos;s answers also vary a little from run to run. The questions cover two
             documents, so the numbers say little about other kinds of PDF.
           </p>

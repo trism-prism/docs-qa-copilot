@@ -4,7 +4,7 @@
 
 ## How it was made
 
-Written by hand from the extracted text (`corpus/*.txt`) and, where tables were garbled, from page images of the PDFs. The app's retrieval and models were not run on any question, so the set is not shaped by what the system finds. Ground truth is human-style (read from the documents by the author), not model output from the system under test.
+Drafted with Claude from the extracted text (`corpus/*.txt`) and, where tables were garbled, from page images of the PDFs, then audited by the author against the source documents. The app's retrieval and models were not run on any question, so the set is not shaped by what the system finds. Ground truth comes from the source documents, not from the system under test.
 
 Mix: 42 answerable (21 per document) and 8 unanswerable. Answerable categories: 16 `fact`, 12 `table`, 8 `procedure`, 6 `multi_page`. Four unanswerable questions are close to real content (2027 amounts that the books say were not yet available, a state-specific limit, a named drug); the rest ask for another insurer's rate, a specific doctor's network status, a specific plan's premium, or a named plan's benefits.
 
