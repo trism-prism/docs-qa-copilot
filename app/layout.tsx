@@ -10,7 +10,7 @@ const sans = IBM_Plex_Sans({ subsets: ["latin"], weight: ["400", "500", "600"], 
 
 const description =
   "Retrieval-augmented answers over policy PDFs, with page citations and an eval page that scores retrieval and answers.";
-const image = { url: "/og-image.png", width: 1200, height: 630, alt: "Docs Q&A Copilot answering a question with a page citation" };
+const image = { url: "/og-image.png", width: 1200, height: 630, alt: "Docs Q&A Copilot: the Ask your documents form with an API key field and a question box, for page-cited answers over policy documents" };
 
 export const metadata: Metadata = {
   metadataBase: new URL("https://docs-qa-copilot.vercel.app"),
